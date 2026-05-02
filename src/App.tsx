@@ -1,8 +1,19 @@
-import { useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 
 const PHONE = 'tel:01336580900';
 const WHATSAPP = 'https://wa.me/message/RN4HQHNW4GLSG1';
 const FACEBOOK = 'https://www.facebook.com/share/1CRYF44Qed/';
+const WEB3FORMS_ACCESS_KEY = 'dd8953a3-7f95-4583-8dc5-3e4977d2c6eb';
+
+const PACKAGES = {
+  starter: { label: 'Starter Pack — ১০ পিস', price: 490 },
+  premier: { label: 'Premier Pack — ২০ পিস', price: 900 },
+} as const;
+
+const DELIVERY_OPTIONS = {
+  inside: { label: 'ঢাকার ভিতরে', price: 60 },
+  outside: { label: 'ঢাকার বাইরে', price: 120 },
+} as const;
 
 const PRODUCT_IMAGES = [
   '/assets/product-1.jpg',
@@ -12,6 +23,9 @@ const PRODUCT_IMAGES = [
 ];
 
 type CountdownState = { hours: number; minutes: number; seconds: number };
+type PackageKey = keyof typeof PACKAGES;
+type DeliveryKey = keyof typeof DELIVERY_OPTIONS;
+type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
 
 function pad(n: number): string {
   return n.toString().padStart(2, '0');
@@ -256,7 +270,7 @@ function Pricing() {
       </div>
 
       <div className="order-cta-stack">
-        <a href={PHONE} className="btn btn-order">
+        <a href="#order-form" className="btn btn-order">
           এখনই অর্ডার করুন
         </a>
         <div className="order-cta-row">
@@ -270,6 +284,167 @@ function Pricing() {
             <span aria-hidden="true">📘</span> Facebook
           </a>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function OrderForm() {
+  const [packageKey, setPackageKey] = useState<PackageKey>('starter');
+  const [deliveryKey, setDeliveryKey] = useState<DeliveryKey>('inside');
+  const [quantity, setQuantity] = useState(1);
+  const [submitState, setSubmitState] = useState<SubmitState>('idle');
+
+  const selectedPackage = PACKAGES[packageKey];
+  const selectedDelivery = DELIVERY_OPTIONS[deliveryKey];
+  const total = selectedPackage.price * quantity + selectedDelivery.price;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitState('submitting');
+
+    const formData = new FormData(event.currentTarget);
+    formData.set('access_key', WEB3FORMS_ACCESS_KEY);
+    formData.set('subject', 'New Magic Tissue Order');
+    formData.set('package', selectedPackage.label);
+    formData.set('package_price', `৳${selectedPackage.price}`);
+    formData.set('quantity', String(quantity));
+    formData.set('delivery_area', selectedDelivery.label);
+    formData.set('delivery_charge', `৳${selectedDelivery.price}`);
+    formData.set('total_amount', `৳${total}`);
+
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Order submit failed');
+      }
+
+      event.currentTarget.reset();
+      setPackageKey('starter');
+      setDeliveryKey('inside');
+      setQuantity(1);
+      setSubmitState('success');
+    } catch {
+      setSubmitState('error');
+    }
+  }
+
+  return (
+    <section className="container order-form-section" id="order-form">
+      <div className="order-form-card">
+        <div className="order-form-copy">
+          <span className="order-form-badge">ক্যাশ অন ডেলিভারি</span>
+          <h2 className="section-title">অর্ডার ফর্ম</h2>
+          <p className="order-form-text">
+            আপনার তথ্য দিন। অর্ডার সাবমিট হলেই বিস্তারিত ইমেইলে চলে যাবে।
+          </p>
+          <div className="order-summary">
+            <div>
+              <span>প্যাকেজ</span>
+              <strong>{selectedPackage.label}</strong>
+            </div>
+            <div>
+              <span>পরিমাণ</span>
+              <strong>{quantity}</strong>
+            </div>
+            <div>
+              <span>ডেলিভারি</span>
+              <strong>৳{selectedDelivery.price}</strong>
+            </div>
+            <div className="order-summary-total">
+              <span>মোট</span>
+              <strong>৳{total}</strong>
+            </div>
+          </div>
+        </div>
+
+        <form className="order-form" onSubmit={handleSubmit}>
+          <input type="checkbox" name="botcheck" className="hidden-field" tabIndex={-1} autoComplete="off" />
+
+          <label>
+            নাম
+            <input name="name" type="text" placeholder="আপনার নাম" required />
+          </label>
+
+          <label>
+            ফোন নম্বর
+            <input name="phone" type="tel" placeholder="01XXXXXXXXX" required />
+          </label>
+
+          <label>
+            সম্পূর্ণ ঠিকানা
+            <textarea name="address" rows={3} placeholder="বাসা/রোড/এলাকা/জেলা" required />
+          </label>
+
+          <div className="form-grid-two">
+            <label>
+              প্যাকেজ
+              <select
+                name="selected_package"
+                value={packageKey}
+                onChange={(event) => setPackageKey(event.target.value as PackageKey)}
+              >
+                <option value="starter">Starter Pack — ১০ পিস — ৳490</option>
+                <option value="premier">Premier Pack — ২০ পিস — ৳900</option>
+              </select>
+            </label>
+
+            <label>
+              পরিমাণ
+              <input
+                name="selected_quantity"
+                type="number"
+                min="1"
+                max="20"
+                value={quantity}
+                onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
+                required
+              />
+            </label>
+          </div>
+
+          <label>
+            ডেলিভারি এলাকা
+            <select
+              name="selected_delivery_area"
+              value={deliveryKey}
+              onChange={(event) => setDeliveryKey(event.target.value as DeliveryKey)}
+            >
+              <option value="inside">ঢাকার ভিতরে — ৳60</option>
+              <option value="outside">ঢাকার বাইরে — ৳120</option>
+            </select>
+          </label>
+
+          <label>
+            নোট / অতিরিক্ত তথ্য
+            <textarea name="note" rows={2} placeholder="ঐচ্ছিক" />
+          </label>
+
+          <div className="form-total-row">
+            <span>মোট পেমেন্ট</span>
+            <strong>৳{total}</strong>
+          </div>
+
+          <button className="btn btn-order form-submit" type="submit" disabled={submitState === 'submitting'}>
+            {submitState === 'submitting' ? 'সাবমিট হচ্ছে...' : 'অর্ডার সাবমিট করুন'}
+          </button>
+
+          {submitState === 'success' && (
+            <p className="form-message form-message-success">
+              অর্ডার সাবমিট হয়েছে। আমরা দ্রুত আপনার সাথে যোগাযোগ করব।
+            </p>
+          )}
+          {submitState === 'error' && (
+            <p className="form-message form-message-error">
+              অর্ডার সাবমিট হয়নি। আবার চেষ্টা করুন বা WhatsApp-এ মেসেজ দিন।
+            </p>
+          )}
+        </form>
       </div>
     </section>
   );
@@ -495,7 +670,7 @@ function FinalCTA() {
           <a className="btn btn-green btn-lg" href={WHATSAPP} target="_blank" rel="noopener noreferrer">
             💬 WhatsApp
           </a>
-          <a className="btn btn-order btn-lg" href={PHONE}>
+          <a className="btn btn-order btn-lg" href="#order-form">
             অর্ডার — ৳490
           </a>
         </div>
@@ -541,6 +716,7 @@ export default function App() {
         <Hero />
         <TrustStrip />
         <Pricing />
+        <OrderForm />
         <Services />
         <Steps />
         <WhyChoose />
