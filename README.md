@@ -18,6 +18,15 @@ npm run build
 npm run preview
 ```
 
+## Vercel deployment
+
+Vercel settings are included in `vercel.json`:
+
+- Framework Preset: `Vite`
+- Install Command: `npm install`
+- Build Command: `npm run build`
+- Output Directory: `dist`
+
 ## Project structure
 
 - `index.html` — entry HTML with Bengali Google Fonts (Hind Siliguri) and Inter
