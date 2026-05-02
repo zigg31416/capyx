@@ -817,11 +817,6 @@ main {
   max-width: none;
 }
 
-.form-submit:disabled {
-  opacity: 0.72;
-  cursor: progress;
-}
-
 .form-message {
   margin: 0;
   padding: 12px 14px;
@@ -838,6 +833,11 @@ main {
 .form-message-error {
   color: #991b1b;
   background: var(--color-red-light);
+}
+
+.form-message-info {
+  color: #1e3a8a;
+  background: var(--color-blue-light);
 }
 
 /* ============ Services ============ */

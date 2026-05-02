@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const PHONE = 'tel:01336580900';
 const WHATSAPP = 'https://wa.me/message/RN4HQHNW4GLSG1';
@@ -25,7 +25,6 @@ const PRODUCT_IMAGES = [
 type CountdownState = { hours: number; minutes: number; seconds: number };
 type PackageKey = keyof typeof PACKAGES;
 type DeliveryKey = keyof typeof DELIVERY_OPTIONS;
-type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
 
 function pad(n: number): string {
   return n.toString().padStart(2, '0');
@@ -293,46 +292,10 @@ function OrderForm() {
   const [packageKey, setPackageKey] = useState<PackageKey>('starter');
   const [deliveryKey, setDeliveryKey] = useState<DeliveryKey>('inside');
   const [quantity, setQuantity] = useState(1);
-  const [submitState, setSubmitState] = useState<SubmitState>('idle');
 
   const selectedPackage = PACKAGES[packageKey];
   const selectedDelivery = DELIVERY_OPTIONS[deliveryKey];
   const total = selectedPackage.price * quantity + selectedDelivery.price;
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitState('submitting');
-
-    const formData = new FormData(event.currentTarget);
-    formData.set('access_key', WEB3FORMS_ACCESS_KEY);
-    formData.set('subject', 'New Magic Tissue Order');
-    formData.set('package', selectedPackage.label);
-    formData.set('package_price', `৳${selectedPackage.price}`);
-    formData.set('quantity', String(quantity));
-    formData.set('delivery_area', selectedDelivery.label);
-    formData.set('delivery_charge', `৳${selectedDelivery.price}`);
-    formData.set('total_amount', `৳${total}`);
-
-    try {
-      const response = await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        body: formData,
-      });
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Order submit failed');
-      }
-
-      event.currentTarget.reset();
-      setPackageKey('starter');
-      setDeliveryKey('inside');
-      setQuantity(1);
-      setSubmitState('success');
-    } catch {
-      setSubmitState('error');
-    }
-  }
 
   return (
     <section className="container order-form-section" id="order-form">
@@ -363,7 +326,16 @@ function OrderForm() {
           </div>
         </div>
 
-        <form className="order-form" onSubmit={handleSubmit}>
+        <form className="order-form" action="https://api.web3forms.com/submit" method="POST">
+          <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
+          <input type="hidden" name="subject" value="New Magic Tissue Order" />
+          <input type="hidden" name="from_name" value="Magic Tissue Website" />
+          <input type="hidden" name="package" value={selectedPackage.label} />
+          <input type="hidden" name="package_price" value={`৳${selectedPackage.price}`} />
+          <input type="hidden" name="quantity" value={quantity} />
+          <input type="hidden" name="delivery_area" value={selectedDelivery.label} />
+          <input type="hidden" name="delivery_charge" value={`৳${selectedDelivery.price}`} />
+          <input type="hidden" name="total_amount" value={`৳${total}`} />
           <input type="checkbox" name="botcheck" className="hidden-field" tabIndex={-1} autoComplete="off" />
 
           <label>
@@ -430,20 +402,13 @@ function OrderForm() {
             <strong>৳{total}</strong>
           </div>
 
-          <button className="btn btn-order form-submit" type="submit" disabled={submitState === 'submitting'}>
-            {submitState === 'submitting' ? 'সাবমিট হচ্ছে...' : 'অর্ডার সাবমিট করুন'}
+          <button className="btn btn-order form-submit" type="submit">
+            অর্ডার সাবমিট করুন
           </button>
 
-          {submitState === 'success' && (
-            <p className="form-message form-message-success">
-              অর্ডার সাবমিট হয়েছে। আমরা দ্রুত আপনার সাথে যোগাযোগ করব।
-            </p>
-          )}
-          {submitState === 'error' && (
-            <p className="form-message form-message-error">
-              অর্ডার সাবমিট হয়নি। আবার চেষ্টা করুন বা WhatsApp-এ মেসেজ দিন।
-            </p>
-          )}
+          <p className="form-message form-message-info">
+            সাবমিট করার পর Web3Forms অর্ডারটি সরাসরি আপনার ইমেইলে পাঠাবে।
+          </p>
         </form>
       </div>
     </section>
